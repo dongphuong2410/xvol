@@ -6,6 +6,7 @@
 #include "config.h"
 #include "log.h"
 #include "private.h"
+#include "libxvol.h"
 
 #define DEFAULT_CONFIG "xvol.cfg"
 
@@ -31,6 +32,10 @@ int main(int argc, char **argv)
     if (!dom) {
         writelog(LV_ERROR, "Please specify domain name");
         goto error;
+    }
+
+    if (!strncmp(plugin, "pslist", STR_BUFF)) {
+        pslist_exec();
     }
     return 0;
 error:
