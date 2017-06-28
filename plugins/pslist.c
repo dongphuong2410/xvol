@@ -8,13 +8,13 @@
 #include "libxvol.h"
 #include "log.h"
 #include "config.h"
+#include "rekall.h"
 
 extern config_t *config;
 
 void pslist_exec(void)
 {
     vmi_instance_t vmi;
-    unsigned long tasks_offset = 0, pid_offset = 0, name_offset = 0;
     status_t status;
 
     char *name = config_get_str(config, "dom");
@@ -38,28 +38,27 @@ void pslist_exec(void)
     }
 
     /* init the offset values */
+    unsigned long tasks_offset = 0;
+    unsigned long pid_offset = 0;
+    unsigned long name_offset = 0;
+    unsigned long ppid_offset = 0;
+    unsigned long thds_offset = 0;
+    unsigned long wow64_offset = 0;
     tasks_offset = vmi_get_offset(vmi, "win_tasks");
-    name_offset = vmi_get_offset(vmi, "win_pname");
-    pid_offset = vmi_get_offset(vmi, "win_pid");
+    rekall_lookup(rekall_profile, "_EPROCESS", "ImageFileName", &name_offset, NULL);
+    rekall_lookup(rekall_profile, "_EPROCESS", "UniqueProcessId", &pid_offset, NULL);
+    rekall_lookup(rekall_profile, "_EPROCESS", "InheritedFromUniqueProcessId", &ppid_offset, NULL);
+    rekall_lookup(rekall_profile, "_EPROCESS", "ActiveThreads", &thds_offset, NULL);
+    rekall_lookup(rekall_profile, "_EPROCESS", "Wow64Process", &wow64_offset, NULL);
 
     if (0 == tasks_offset) {
         writelog(LV_ERROR, "Failed to find win_tasks");
-        goto done;
-    }
-    if (0 == pid_offset) {
-        writelog(LV_ERROR, "Failed to find win_pid");
-        goto done;
-    }
-    if (0 == name_offset) {
-        writelog(LV_ERROR, "Failed to find win_pname");
         goto done;
     }
 
     vmi_pause_vm(vmi);
     addr_t list_head = 0, next_list_entry = 0;
     addr_t current_process = 0;
-    char *procname = NULL;
-    vmi_pid_t pid = 0;
 
     if (VMI_FAILURE == vmi_read_addr_ksym(vmi, "PsActiveProcessHead", &list_head)) {
         writelog(LV_ERROR, "Failed to find PsActiveProcessHead");
@@ -67,17 +66,26 @@ void pslist_exec(void)
     }
     next_list_entry = list_head;
     /* Walk the task list */
+    printf("%5s %-20s %5s %5s %5s\n", "PID", "Name", "PPID", "Thds", "Wow64");
+    printf("%5s %-20s %5s %5s %5s\n", "---", "----", "----", "----", "-----");
     do {
+        char *procname = NULL;
+        vmi_pid_t pid = 0;
+        vmi_pid_t ppid = 0;
+        uint32_t thds = 0;
+        uint32_t wow64 = 0;
+        addr_t addr;
         current_process = next_list_entry - tasks_offset;
         vmi_read_32_va(vmi, current_process + pid_offset, 0, (uint32_t *)&pid);
         procname = vmi_read_str_va(vmi, current_process + name_offset, 0);
+        vmi_read_32_va(vmi, current_process + ppid_offset, 0, (uint32_t *)&ppid);
+        vmi_read_32_va(vmi, current_process + thds_offset, 0, (uint32_t *)&thds);
+        vmi_read_32_va(vmi, current_process + wow64_offset, 0, (uint32_t *)&wow64);
         if (!procname) {
             writelog(LV_ERROR, "Failed to find procname");
             goto done;
         }
-        printf("[%5d] %s (struct addr:%"PRIx64")\n", pid, procname, current_process);
-        free(procname);
-        procname = NULL;
+        printf("%5d %-20s %5d %5d %5d\n", pid, procname, ppid, thds, wow64);
 
         status = vmi_read_addr_va(vmi, next_list_entry, 0, &next_list_entry);
         if (status == VMI_FAILURE) {

@@ -1,11 +1,11 @@
 CC=gcc
 CFLAGS=-ggdb -O0 -I./include -I./plugins -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include
-LDFLAGS=-lvmi -lglib-2.0 -lxenctrl -lxentoollog -lxenlight
+LDFLAGS=-lvmi -lglib-2.0 -lxenctrl -lxentoollog -lxenlight -ljson-c
 
 STATICLIB=./plugins/libxvol.a
 SUBDIRS=plugins
 
-SRC=xvol.c log.c config.c
+SRC=xvol.c log.c config.c rekall.c
 
 CFLAGS+= -DCURRENT_LEVEL=LV_WARN
 .PHONY : all $(SUBDIRS) clean
