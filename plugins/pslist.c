@@ -12,6 +12,16 @@
 
 extern config_t *config;
 
+#define TICKS_PER_SECOND 10000000
+#define EPOCH_DIFFERENCE 11644473600LL
+time_t wintime_to_unixtime(long long int input)
+{
+    long long int temp;
+    temp = input / TICKS_PER_SECOND;
+    temp = temp - EPOCH_DIFFERENCE;
+    return (time_t)temp;
+}
+
 void pslist_exec(void)
 {
     vmi_instance_t vmi;
@@ -43,13 +53,21 @@ void pslist_exec(void)
     unsigned long name_offset = 0;
     unsigned long ppid_offset = 0;
     unsigned long thds_offset = 0;
+    unsigned long object_tbl_offset = 0;
     unsigned long wow64_offset = 0;
+    unsigned long handle_cnt_offset = 0;
+    unsigned long create_time_offset = 0;
+    unsigned long exit_time_offset = 0;
     tasks_offset = vmi_get_offset(vmi, "win_tasks");
     rekall_lookup(rekall_profile, "_EPROCESS", "ImageFileName", &name_offset, NULL);
     rekall_lookup(rekall_profile, "_EPROCESS", "UniqueProcessId", &pid_offset, NULL);
     rekall_lookup(rekall_profile, "_EPROCESS", "InheritedFromUniqueProcessId", &ppid_offset, NULL);
     rekall_lookup(rekall_profile, "_EPROCESS", "ActiveThreads", &thds_offset, NULL);
+    rekall_lookup(rekall_profile, "_EPROCESS", "ObjectTable", &object_tbl_offset, NULL);
+    rekall_lookup(rekall_profile, "_HANDLE_TABLE", "HandleCount", &handle_cnt_offset, NULL);
     rekall_lookup(rekall_profile, "_EPROCESS", "Wow64Process", &wow64_offset, NULL);
+    rekall_lookup(rekall_profile, "_EPROCESS", "CreateTime", &create_time_offset, NULL);
+    rekall_lookup(rekall_profile, "_EPROCESS", "ExitTime", &exit_time_offset, NULL);
 
     if (0 == tasks_offset) {
         writelog(LV_ERROR, "Failed to find win_tasks");
@@ -66,26 +84,46 @@ void pslist_exec(void)
     }
     next_list_entry = list_head;
     /* Walk the task list */
-    printf("%5s %-20s %5s %5s %5s\n", "PID", "Name", "PPID", "Thds", "Wow64");
-    printf("%5s %-20s %5s %5s %5s\n", "---", "----", "----", "----", "-----");
+    printf("%5s %-20s %5s %5s %5s %10s %20s %20s\n", "PID", "Name", "PPID", "Thds", "Hds", "Wow64", "CreateTime", "ExitTime");
+    printf("%5s %-20s %5s %5s %5s %10s %20s %20s\n", "---", "----", "----", "----", "---", "-----", "----------", "--------");
     do {
         char *procname = NULL;
         vmi_pid_t pid = 0;
         vmi_pid_t ppid = 0;
         uint32_t thds = 0;
-        uint32_t wow64 = 0;
+        uint64_t wow64 = 0;
+        uint32_t hds = 0;
+        uint64_t create_time;
+        uint64_t exit_time;
+        addr_t object_tbl_addr = 0;
         addr_t addr;
         current_process = next_list_entry - tasks_offset;
         vmi_read_32_va(vmi, current_process + pid_offset, 0, (uint32_t *)&pid);
         procname = vmi_read_str_va(vmi, current_process + name_offset, 0);
         vmi_read_32_va(vmi, current_process + ppid_offset, 0, (uint32_t *)&ppid);
         vmi_read_32_va(vmi, current_process + thds_offset, 0, (uint32_t *)&thds);
-        vmi_read_32_va(vmi, current_process + wow64_offset, 0, (uint32_t *)&wow64);
+        vmi_read_addr_va(vmi, current_process + object_tbl_offset, 0, &object_tbl_addr);
+        vmi_read_32_va(vmi, object_tbl_addr + handle_cnt_offset, 0, &hds);
+        vmi_read_64_va(vmi, current_process + wow64_offset, 0, &wow64);
+        vmi_read_64_va(vmi, current_process + create_time_offset, 0, &create_time);
+        vmi_read_64_va(vmi, current_process + exit_time_offset, 0, &exit_time);
+        char create_time_str[20] = "";
+        char exit_time_str[20] = "";
+
+        if (create_time) {
+            time_t utime = wintime_to_unixtime(create_time);
+            strftime(create_time_str, 20, "%Y-%m-%d %H:%M:%S", localtime(&utime));
+        }
+        if (exit_time) {
+            time_t utime = wintime_to_unixtime(exit_time);
+            strftime(exit_time_str, 20, "%Y-%m-%d %H:%M:%S", localtime(&utime));
+        }
+
         if (!procname) {
             writelog(LV_ERROR, "Failed to find procname");
             goto done;
         }
-        printf("%5d %-20s %5d %5d %5d\n", pid, procname, ppid, thds, wow64);
+        printf("%5d %-20s %5d %5d %5d %10lx %20s %20s\n", pid, procname, ppid, thds, hds, wow64, create_time_str, exit_time_str);
 
         status = vmi_read_addr_va(vmi, next_list_entry, 0, &next_list_entry);
         if (status == VMI_FAILURE) {
