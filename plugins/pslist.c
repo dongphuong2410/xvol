@@ -58,7 +58,7 @@ void pslist_exec(void)
     unsigned long handle_cnt_offset = 0;
     unsigned long create_time_offset = 0;
     unsigned long exit_time_offset = 0;
-    tasks_offset = vmi_get_offset(vmi, "win_tasks");
+    rekall_lookup(rekall_profile, "_EPROCESS", "ActiveProcessLinks", &tasks_offset, NULL);
     rekall_lookup(rekall_profile, "_EPROCESS", "ImageFileName", &name_offset, NULL);
     rekall_lookup(rekall_profile, "_EPROCESS", "UniqueProcessId", &pid_offset, NULL);
     rekall_lookup(rekall_profile, "_EPROCESS", "InheritedFromUniqueProcessId", &ppid_offset, NULL);
@@ -98,6 +98,15 @@ void pslist_exec(void)
         addr_t object_tbl_addr = 0;
         addr_t addr;
         current_process = next_list_entry - tasks_offset;
+        status = vmi_read_addr_va(vmi, next_list_entry, 0, &next_list_entry);
+        if (status == VMI_FAILURE) {
+            writelog(LV_ERROR, "Failed to read next pointer in loop");
+            goto done;
+        }
+        if (next_list_entry == list_head) {
+            break;
+        }
+
         vmi_read_32_va(vmi, current_process + pid_offset, 0, (uint32_t *)&pid);
         procname = vmi_read_str_va(vmi, current_process + name_offset, 0);
         vmi_read_32_va(vmi, current_process + ppid_offset, 0, (uint32_t *)&ppid);
@@ -125,12 +134,7 @@ void pslist_exec(void)
         }
         printf("%5d %-20s %5d %5d %5d %10lx %20s %20s\n", pid, procname, ppid, thds, hds, wow64, create_time_str, exit_time_str);
 
-        status = vmi_read_addr_va(vmi, next_list_entry, 0, &next_list_entry);
-        if (status == VMI_FAILURE) {
-            writelog(LV_ERROR, "Failed to read next pointer in loop");
-            goto done;
-        }
-    } while (next_list_entry != list_head);
+    } while (1);
 
     vmi_resume_vm(vmi);
 
