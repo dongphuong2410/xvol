@@ -9,6 +9,7 @@
 #include "log.h"
 #include "config.h"
 #include "rekall.h"
+#include "constants.h"
 
 extern config_t *config;
 
@@ -47,29 +48,7 @@ void pslist_exec(void)
         writelog(LV_ERROR, "Failed to init LibVMI library");
     }
 
-    /* init the offset values */
-    unsigned long tasks_offset = 0;
-    unsigned long pid_offset = 0;
-    unsigned long name_offset = 0;
-    unsigned long ppid_offset = 0;
-    unsigned long thds_offset = 0;
-    unsigned long object_tbl_offset = 0;
-    unsigned long wow64_offset = 0;
-    unsigned long handle_cnt_offset = 0;
-    unsigned long create_time_offset = 0;
-    unsigned long exit_time_offset = 0;
-    rekall_lookup(rekall_profile, "_EPROCESS", "ActiveProcessLinks", &tasks_offset, NULL);
-    rekall_lookup(rekall_profile, "_EPROCESS", "ImageFileName", &name_offset, NULL);
-    rekall_lookup(rekall_profile, "_EPROCESS", "UniqueProcessId", &pid_offset, NULL);
-    rekall_lookup(rekall_profile, "_EPROCESS", "InheritedFromUniqueProcessId", &ppid_offset, NULL);
-    rekall_lookup(rekall_profile, "_EPROCESS", "ActiveThreads", &thds_offset, NULL);
-    rekall_lookup(rekall_profile, "_EPROCESS", "ObjectTable", &object_tbl_offset, NULL);
-    rekall_lookup(rekall_profile, "_HANDLE_TABLE", "HandleCount", &handle_cnt_offset, NULL);
-    rekall_lookup(rekall_profile, "_EPROCESS", "Wow64Process", &wow64_offset, NULL);
-    rekall_lookup(rekall_profile, "_EPROCESS", "CreateTime", &create_time_offset, NULL);
-    rekall_lookup(rekall_profile, "_EPROCESS", "ExitTime", &exit_time_offset, NULL);
-
-    if (0 == tasks_offset) {
+    if (0 == EPROCESS_ActiveProcessLinks) {
         writelog(LV_ERROR, "Failed to find win_tasks");
         goto done;
     }
@@ -97,7 +76,7 @@ void pslist_exec(void)
         uint64_t exit_time;
         addr_t object_tbl_addr = 0;
         addr_t addr;
-        current_process = next_list_entry - tasks_offset;
+        current_process = next_list_entry - EPROCESS_ActiveProcessLinks;
         status = vmi_read_addr_va(vmi, next_list_entry, 0, &next_list_entry);
         if (status == VMI_FAILURE) {
             writelog(LV_ERROR, "Failed to read next pointer in loop");
@@ -107,15 +86,15 @@ void pslist_exec(void)
             break;
         }
 
-        vmi_read_32_va(vmi, current_process + pid_offset, 0, (uint32_t *)&pid);
-        procname = vmi_read_str_va(vmi, current_process + name_offset, 0);
-        vmi_read_32_va(vmi, current_process + ppid_offset, 0, (uint32_t *)&ppid);
-        vmi_read_32_va(vmi, current_process + thds_offset, 0, (uint32_t *)&thds);
-        vmi_read_addr_va(vmi, current_process + object_tbl_offset, 0, &object_tbl_addr);
-        vmi_read_32_va(vmi, object_tbl_addr + handle_cnt_offset, 0, &hds);
-        vmi_read_64_va(vmi, current_process + wow64_offset, 0, &wow64);
-        vmi_read_64_va(vmi, current_process + create_time_offset, 0, &create_time);
-        vmi_read_64_va(vmi, current_process + exit_time_offset, 0, &exit_time);
+        vmi_read_32_va(vmi, current_process + EPROCESS_UniqueProcessId, 0, (uint32_t *)&pid);
+        procname = vmi_read_str_va(vmi, current_process + EPROCESS_ImageFileName, 0);
+        vmi_read_32_va(vmi, current_process + EPROCESS_InheritedFromUniqueProcessId, 0, (uint32_t *)&ppid);
+        vmi_read_32_va(vmi, current_process + EPROCESS_ActiveThreads, 0, (uint32_t *)&thds);
+        vmi_read_addr_va(vmi, current_process + EPROCESS_ObjectTable, 0, &object_tbl_addr);
+        vmi_read_32_va(vmi, object_tbl_addr + HANDLE_TABLE_HandleCount, 0, &hds);
+        vmi_read_64_va(vmi, current_process + EPROCESS_Wow64Process, 0, &wow64);
+        vmi_read_64_va(vmi, current_process + EPROCESS_CreateTime, 0, &create_time);
+        vmi_read_64_va(vmi, current_process + EPROCESS_ExitTime, 0, &exit_time);
         char create_time_str[20] = "";
         char exit_time_str[20] = "";
 

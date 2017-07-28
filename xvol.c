@@ -7,6 +7,7 @@
 #include "log.h"
 #include "private.h"
 #include "libxvol.h"
+#include "constants.h"
 
 #define DEFAULT_CONFIG "xvol.cfg"
 
@@ -34,6 +35,7 @@ int main(int argc, char **argv)
         goto error;
     }
 
+    constants_init(rekall);
     if (!strncmp(plugin, "pslist", STR_BUFF)) {
         pslist_exec();
     }
