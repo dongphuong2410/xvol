@@ -29,23 +29,9 @@ void pslist_exec(void)
     status_t status;
 
     char *name = config_get_str(config, "dom");
-    if (VMI_FAILURE == vmi_init(&vmi, VMI_XEN, name, VMI_INIT_DOMAINNAME, NULL, NULL)) {
+    if (VMI_FAILURE == vmi_init_complete(&vmi, name, VMI_INIT_DOMAINNAME, NULL, VMI_CONFIG_GLOBAL_FILE_ENTRY, NULL, NULL)) {
         writelog(LV_ERROR, "Failed to init LibVMI library");
         return;
-    }
-    char *rekall_profile = config_get_str(config, "rekall_profile");
-    GHashTable *vmicfg = g_hash_table_new(g_str_hash, g_str_equal);
-    g_hash_table_insert(vmicfg, "rekall_profile", rekall_profile);
-    g_hash_table_insert(vmicfg, "os_type", "Windows");
-    uint64_t flags = VMI_PM_INITFLAG_TRANSITION_PAGES;
-    if (VMI_PM_UNKNOWN == vmi_init_paging(vmi, flags)) {
-        writelog(LV_ERROR, "Failed to init LibVMI paging");
-        goto done;
-    }
-    os_t os = vmi_init_os(vmi, VMI_CONFIG_GHASHTABLE, vmicfg, NULL);
-    g_hash_table_destroy(vmicfg);
-    if (os != VMI_OS_WINDOWS) {
-        writelog(LV_ERROR, "Failed to init LibVMI library");
     }
 
     if (0 == EPROCESS_ActiveProcessLinks) {
