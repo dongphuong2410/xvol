@@ -5,7 +5,7 @@ LDFLAGS=-lvmi -lglib-2.0 -lxenctrl -lxentoollog -lxenlight -ljson-c -lm
 STATICLIB=./plugins/libxvol.a
 SUBDIRS=plugins
 
-SRC=xvol.c log.c config.c rekall.c
+SRC=xvol.c log.c config.c rekall.c renderer.c
 
 CFLAGS+= -DCURRENT_LEVEL=LV_WARN
 .PHONY : all $(SUBDIRS) clean

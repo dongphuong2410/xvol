@@ -10,6 +10,7 @@
 #include "config.h"
 #include "rekall.h"
 #include "constants.h"
+#include "renderer.h"
 
 extern config_t *config;
 
@@ -48,9 +49,16 @@ void pslist_exec(void)
         goto done;
     }
     next_list_entry = list_head;
+    rd_t *rd = rd_init();
+    rd_add_header(rd, "PID", ">5");
+    rd_add_header(rd, "Name", "<20");
+    rd_add_header(rd, "PPID", ">5");
+    rd_add_header(rd, "Thds", ">5");
+    rd_add_header(rd, "Hds", ">5");
+    rd_add_header(rd, "Wow64", ">10");
+    rd_add_header(rd, "CreateTime", ">20");
+    rd_add_header(rd, "ExitTime", ">20");
     /* Walk the task list */
-    printf("%5s %-20s %5s %5s %5s %10s %20s %20s\n", "PID", "Name", "PPID", "Thds", "Hds", "Wow64", "CreateTime", "ExitTime");
-    printf("%5s %-20s %5s %5s %5s %10s %20s %20s\n", "---", "----", "----", "----", "---", "-----", "----------", "--------");
     do {
         char *procname = NULL;
         vmi_pid_t pid = 0;
@@ -97,10 +105,25 @@ void pslist_exec(void)
             writelog(LV_ERROR, "Failed to find procname");
             goto done;
         }
-        printf("%5d %-20s %5d %5d %5d %10lx %20s %20s\n", pid, procname, ppid, thds, hds, wow64, create_time_str, exit_time_str);
+        char buf[1024];
+        sprintf(buf, "%d", pid);
+        rd_add_item(rd, buf);
+        rd_add_item(rd, procname);
+        sprintf(buf, "%d", ppid);
+        rd_add_item(rd, buf);
+        sprintf(buf, "%d", thds);
+        rd_add_item(rd, buf);
+        sprintf(buf, "%d", hds);
+        rd_add_item(rd, buf);
+        sprintf(buf, "%lx", wow64);
+        rd_add_item(rd, buf);
+        rd_add_item(rd, create_time_str);
+        rd_add_item(rd, exit_time_str);
 
     } while (1);
 
+    rd_print(rd);
+    rd_close(rd);
     vmi_resume_vm(vmi);
 
 done:
