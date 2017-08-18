@@ -1,0 +1,19 @@
+#!/bin/bash
+function check_pslist {
+    sudo ./xvol -p pslist -r /root/$1.json -d $1 &> tmp.txt
+    tmp=$(cat tmp.txt | wc -l)
+    process_no=$((tmp - 2))
+    svhost_exist=$(cat tmp.txt | grep "svchost.exe" | wc -l)
+
+    if [[ $process_no > 0 && $svhost_exist > 0 ]]; then
+        echo "SUCCESS"
+    else 
+        echo "Checking pslist failed $1"
+    fi
+    rm -rf tmp.txt
+}
+
+check_pslist "windows"
+check_pslist "windows7_32"
+check_pslist "vista32"
+
