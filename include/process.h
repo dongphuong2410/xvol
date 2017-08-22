@@ -16,6 +16,7 @@ typedef struct _process {
     uint64_t    wow64;
     char        create_time[STR_BUFF];
     char        exit_time[STR_BUFF];
+    addr_t      handle_table;
 } process_t;
 
 /**

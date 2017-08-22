@@ -14,6 +14,10 @@ addr_t EPROCESS_CreateTime;
 addr_t EPROCESS_ExitTime;
 
 addr_t HANDLE_TABLE_HandleCount;
+addr_t HANDLE_TABLE_TableCode;
+
+addr_t HANDLE_TABLE_ENTRY_SIZE;
+addr_t HANDLE_TABLE_ENTRY_Info;
 
 static int constants_init(const char *rekall_profile)
 {
@@ -28,6 +32,10 @@ static int constants_init(const char *rekall_profile)
     rekall_lookup(rekall_profile, "_EPROCESS", "ExitTime", &EPROCESS_ExitTime, NULL);
 
     rekall_lookup(rekall_profile, "_HANDLE_TABLE", "HandleCount", &HANDLE_TABLE_HandleCount, NULL);
+    rekall_lookup(rekall_profile, "_HANDLE_TABLE", "TableCode", &HANDLE_TABLE_TableCode, NULL);
+
+    rekall_lookup(rekall_profile, "_HANDLE_TABLE_ENTRY", NULL, NULL, &HANDLE_TABLE_ENTRY_SIZE);
+    rekall_lookup(rekall_profile, "_HANDLE_TABLE_ENTRY", "Info", &HANDLE_TABLE_ENTRY_Info, NULL);
 }
 
 #endif

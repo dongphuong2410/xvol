@@ -38,8 +38,8 @@ GSList *process_list(vmi_instance_t vmi)
         vmi_read_32_va(vmi, current_process + EPROCESS_InheritedFromUniqueProcessId, 0, (uint32_t *)&(p->ppid));
         vmi_read_32_va(vmi, current_process + EPROCESS_ActiveThreads, 0, (uint32_t *)&(p->thds));
         addr_t object_tbl_addr = 0;
-        vmi_read_addr_va(vmi, current_process + EPROCESS_ObjectTable, 0, &object_tbl_addr);
-        vmi_read_32_va(vmi, object_tbl_addr + HANDLE_TABLE_HandleCount, 0, &(p->hds));
+        vmi_read_addr_va(vmi, current_process + EPROCESS_ObjectTable, 0, &(p->handle_table));
+        vmi_read_32_va(vmi, p->handle_table + HANDLE_TABLE_HandleCount, 0, &(p->hds));
         vmi_read_64_va(vmi, current_process + EPROCESS_Wow64Process, 0, &(p->wow64));
         uint64_t create_time, exit_time;
         vmi_read_64_va(vmi, current_process + EPROCESS_CreateTime, 0, &create_time);

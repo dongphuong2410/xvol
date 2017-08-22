@@ -3,6 +3,8 @@
 
 #define PATH_MAX_LEN 1024
 #define STR_BUFF 1024
+#define EX_FAST_REF_MASK 7
+#define HANDLE_MULTIPLIER 4
 
 #include <stdlib.h>
 
