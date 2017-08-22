@@ -17,7 +17,11 @@ addr_t HANDLE_TABLE_HandleCount;
 addr_t HANDLE_TABLE_TableCode;
 
 addr_t HANDLE_TABLE_ENTRY_SIZE;
-addr_t HANDLE_TABLE_ENTRY_Info;
+addr_t HANDLE_TABLE_ENTRY_Object;
+
+addr_t OBJECT_HEADER_HandleCount;
+addr_t OBJECT_HEADER_PointerCount;
+addr_t OBJECT_HEADER_TypeIndex;
 
 static int constants_init(const char *rekall_profile)
 {
@@ -35,7 +39,11 @@ static int constants_init(const char *rekall_profile)
     rekall_lookup(rekall_profile, "_HANDLE_TABLE", "TableCode", &HANDLE_TABLE_TableCode, NULL);
 
     rekall_lookup(rekall_profile, "_HANDLE_TABLE_ENTRY", NULL, NULL, &HANDLE_TABLE_ENTRY_SIZE);
-    rekall_lookup(rekall_profile, "_HANDLE_TABLE_ENTRY", "Info", &HANDLE_TABLE_ENTRY_Info, NULL);
+    rekall_lookup(rekall_profile, "_HANDLE_TABLE_ENTRY", "Info", &HANDLE_TABLE_ENTRY_Object, NULL);
+
+    rekall_lookup(rekall_profile, "_OBJECT_HEADER", "HandleCount", &OBJECT_HEADER_HandleCount, NULL);
+    rekall_lookup(rekall_profile, "_OBJECT_HEADER", "PointerCount", &OBJECT_HEADER_PointerCount, NULL);
+    rekall_lookup(rekall_profile, "_OBJECT_HEADER", "TypeIndex", &OBJECT_HEADER_TypeIndex, NULL);
 }
 
 #endif
