@@ -20,6 +20,7 @@ extern config_t *config;
 page_mode_t pm;
 win_ver_t winver;
 int pid;
+uint32_t psize;
 
 void handle_exec(char *param)
 {
@@ -34,6 +35,7 @@ void handle_exec(char *param)
     }
     pm = vmi_get_page_mode(vmi, 0);
     winver = vmi_get_winver(vmi);
+    psize = (pm == VMI_PM_IA32E ? 8 : 4);
 
     /* Search for process from pid */
     pid = atoi(param);
@@ -77,7 +79,6 @@ void handle_exec(char *param)
         case 1:
         {
             addr_t table = 0;
-            size_t psize = (pm == VMI_PM_IA32E ? 8 : 4);
             uint32_t lowest_count = VMI_PS_4KB / HANDLE_TABLE_ENTRY_SIZE;
             uint32_t table_no = VMI_PS_4KB / psize;
             int i, j;
@@ -130,6 +131,7 @@ done:
     vmi_destroy(vmi);
 }
 
+//TODO: print out handle value, ObjectType, Object Header address, File Name (if exists)
 void read_obj(vmi_instance_t vmi, addr_t addr)
 {
     switch (winver) {
@@ -159,5 +161,65 @@ void read_obj(vmi_instance_t vmi, addr_t addr)
     }
     uint8_t object_type;
     vmi_read_8_va(vmi, addr + OBJECT_HEADER_TypeIndex, pid, &object_type);
-    printf("HandleCount %lu PointerCount %lu Object Type %u\n", hdl_cnt, ptr_cnt, object_type);
+    //printf("HandleCount %lu PointerCount %lu Object Type %u\n", hdl_cnt, ptr_cnt, object_type);
+
+    //Search for /GLOBAL?? Directory
+    addr_t global_dir = 0;
+    if (object_type == 3) {     //Directory
+        addr_t name_info = addr - 0x20;
+        addr_t dirname = name_info + OBJECT_HEADER_NAME_INFO_Name;
+        unicode_string_t *us = vmi_read_unicode_str_va(vmi, dirname, pid);
+        unicode_string_t out = { .contents = NULL };
+        if (us) {
+            status_t status = vmi_convert_str_encoding(us, &out, "UTF-8");
+            if (VMI_SUCCESS == status) {
+                if (0 == strncmp(out.contents, "GLOBAL??", 8)) {
+                    global_dir = addr + OBJECT_HEADER_Body;
+                }
+                printf("Directory : %s\n", out.contents);
+                g_free(out.contents);
+            }
+            vmi_free_unicode_str(us);
+        }
+    }
+
+    /*List all file objects in /GLOBAL?? Directory*/
+    if (global_dir) {
+        addr_t bucket_addr = global_dir + OBJECT_DIRECTORY_HashBuckets;
+        uint32_t bucket_size = OBJECT_DIRECTORY_Lock / psize;
+        int i;
+        addr_t dir_entry;
+        for (i = 0; i < bucket_size; i++) {
+            dir_entry = 0;
+            vmi_read_addr_va(vmi, bucket_addr + psize * i, pid, &dir_entry);
+            while (dir_entry) {
+                addr_t obj = 0;
+                vmi_read_addr_va(vmi, dir_entry + OBJECT_DIRECTORY_ENTRY_Object, pid, &obj);
+                if (obj) {
+                    //Check type of object,for SymbolicLink object
+                    addr_t obj_header = obj - 0x30;
+                    uint8_t type_index = 0;
+                    vmi_read_8_va(vmi, obj_header + OBJECT_HEADER_TypeIndex, pid, &type_index);
+                    if (type_index == 0x4) {             //SymbolicLink
+                        uint32_t drive_index = 0;
+                        vmi_read_32_va(vmi, obj + OBJECT_SYMBOLIC_LINK_DosDeviceDriveIndex, pid, &drive_index);
+                        if (drive_index > 0) {
+                            printf("Drive index %u\n", drive_index);
+                            unicode_string_t *us = vmi_read_unicode_str_va(vmi, obj + OBJECT_SYMBOLIC_LINK_LinkTarget, pid);
+                            unicode_string_t out = { .contents = NULL };
+                            if (us) {
+                                status_t status = vmi_convert_str_encoding(us, &out, "UTF-8");
+                                if (VMI_SUCCESS == status) {
+                                    printf("Link Target : %s\n", out.contents);
+                                    g_free(out.contents);
+                                }
+                                vmi_free_unicode_str(us);
+                            }
+                        }
+                    }
+                }
+                vmi_read_addr_va(vmi, dir_entry + OBJECT_DIRECTORY_ENTRY_ChainLink, pid, &dir_entry);
+            }
+        }
+    }
 }

@@ -22,6 +22,18 @@ addr_t HANDLE_TABLE_ENTRY_Object;
 addr_t OBJECT_HEADER_HandleCount;
 addr_t OBJECT_HEADER_PointerCount;
 addr_t OBJECT_HEADER_TypeIndex;
+addr_t OBJECT_HEADER_Body;
+
+addr_t OBJECT_HEADER_NAME_INFO_Name;
+
+addr_t OBJECT_DIRECTORY_HashBuckets;
+addr_t OBJECT_DIRECTORY_Lock;
+
+addr_t OBJECT_DIRECTORY_ENTRY_Object;
+addr_t OBJECT_DIRECTORY_ENTRY_ChainLink;
+
+addr_t OBJECT_SYMBOLIC_LINK_LinkTarget;
+addr_t OBJECT_SYMBOLIC_LINK_DosDeviceDriveIndex;
 
 static int constants_init(const char *rekall_profile)
 {
@@ -44,6 +56,18 @@ static int constants_init(const char *rekall_profile)
     rekall_lookup(rekall_profile, "_OBJECT_HEADER", "HandleCount", &OBJECT_HEADER_HandleCount, NULL);
     rekall_lookup(rekall_profile, "_OBJECT_HEADER", "PointerCount", &OBJECT_HEADER_PointerCount, NULL);
     rekall_lookup(rekall_profile, "_OBJECT_HEADER", "TypeIndex", &OBJECT_HEADER_TypeIndex, NULL);
+    rekall_lookup(rekall_profile, "_OBJECT_HEADER", "Body", &OBJECT_HEADER_Body, NULL);
+
+    rekall_lookup(rekall_profile, "_OBJECT_HEADER_NAME_INFO", "Name", &OBJECT_HEADER_NAME_INFO_Name, NULL);
+
+    rekall_lookup(rekall_profile, "_OBJECT_DIRECTORY", "HashBuckets", &OBJECT_DIRECTORY_HashBuckets, NULL);
+    rekall_lookup(rekall_profile, "_OBJECT_DIRECTORY", "Lock", &OBJECT_DIRECTORY_Lock, NULL);
+
+    rekall_lookup(rekall_profile, "_OBJECT_DIRECTORY_ENTRY", "Object", &OBJECT_DIRECTORY_ENTRY_Object, NULL);
+    rekall_lookup(rekall_profile, "_OBJECT_DIRECTORY_ENTRY", "ChainLink", &OBJECT_DIRECTORY_ENTRY_ChainLink, NULL);
+
+    rekall_lookup(rekall_profile, "_OBJECT_SYMBOLIC_LINK", "LinkTarget", &OBJECT_SYMBOLIC_LINK_LinkTarget, NULL);
+    rekall_lookup(rekall_profile, "_OBJECT_SYMBOLIC_LINK", "DosDeviceDriveIndex", &OBJECT_SYMBOLIC_LINK_DosDeviceDriveIndex, NULL);
 }
 
 #endif

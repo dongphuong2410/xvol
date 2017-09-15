@@ -1,3 +1,4 @@
 *.swp
 xvol
 plugins/libxvol.a
+**/*.o
