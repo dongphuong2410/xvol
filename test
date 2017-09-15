@@ -16,4 +16,9 @@ function check_pslist {
 check_pslist "windows"
 check_pslist "windows7_32"
 check_pslist "vista32"
+check_pslist "vista64"
+check_pslist "server2003"
+check_pslist "server2008"
+check_pslist "winxp32"
+check_pslist "windows8"
 
