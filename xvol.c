@@ -41,6 +41,9 @@ int main(int argc, char **argv)
     if (!strncmp(plugin, "pslist", STR_BUFF)) {
         pslist_exec();
     }
+    else if (!strncmp(plugin, "pstree", STR_BUFF)) {
+        pstree_exec();
+    }
     else if (!strncmp(plugin, "handle", STR_BUFF)) {
         handle_exec(param);
     }

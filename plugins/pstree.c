@@ -15,11 +15,11 @@
 #include "private.h"
 #include "vmi_helper.h"
 
-void add_item(process_t *process, void *data);
+static void add_item(process_t *process, void *data);
 
 extern config_t *config;
 
-void pslist_exec(void)
+void pstree_exec(void)
 {
     char *name = config_get_str(config, "dom");
     char *rekall = config_get_str(config, "rekall_profile");
@@ -49,7 +49,7 @@ done:
     vmi_destroy(vmi);
 }
 
-void add_item(process_t *process, void *data) {
+static void add_item(process_t *process, void *data) {
     char buf[1024];
     rd_t *rd = (rd_t *)data;
     sprintf(buf, "%d", process->pid);
