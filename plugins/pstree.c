@@ -15,7 +15,16 @@
 #include "private.h"
 #include "vmi_helper.h"
 
-static void add_item(process_t *process, void *data);
+typedef struct _psnode_t {
+    uint32_t id;
+    uint32_t parent;
+    process_t *ps;
+    struct _psnode_t *next;
+    struct _psnode_t *child;
+} psnode_t;
+
+/* Add item to pstree */
+static void _add_node(psnode_t **node);
 
 extern config_t *config;
 
@@ -38,7 +47,16 @@ void pstree_exec(void)
         rd_add_header(rd, "CreateTime", ">20");
         rd_add_header(rd, "ExitTime", ">20");
 
-        g_slist_foreach(processes, (GFunc)add_item, rd);
+        psnode_t *root = NULL;
+        for (GSList *it = processes; it != NULL; it = it->next) {
+            process_t *ps = (process_t *)(it->data);
+            psnode_t *node = (psnode_t *)calloc(1, sizeof(psnode_t));
+            node->id = ps->pid;
+            node->parent = ps->ppid;
+            node->ps = ps;
+
+            _add_node(&root, node);
+        }
 
         rd_print(rd);
         rd_close(rd);
@@ -49,20 +67,12 @@ done:
     vmi_destroy(vmi);
 }
 
-static void add_item(process_t *process, void *data) {
-    char buf[1024];
-    rd_t *rd = (rd_t *)data;
-    sprintf(buf, "%d", process->pid);
-    rd_add_item(rd, buf);
-    rd_add_item(rd, process->name);
-    sprintf(buf, "%d", process->ppid);
-    rd_add_item(rd, buf);
-    sprintf(buf, "%d", process->thds);
-    rd_add_item(rd, buf);
-    sprintf(buf, "%d", process->hds);
-    rd_add_item(rd, buf);
-    sprintf(buf, "%lx", process->wow64);
-    rd_add_item(rd, buf);
-    rd_add_item(rd, process->create_time);
-    rd_add_item(rd, process->exit_time);
+static void _add_node(psnode_t **root, psnode_t *node) {
+    if (*root) == NULL {
+        *root = node;
+    }
+    else {
+        int inserted = 0;
+
+    }
 }
